@@ -93,13 +93,13 @@ namespace RevitApp.Plugin.ClashManagement
 
                     var generalHeaderColumns = headerColumns.Where(c => c.ClassName == "generalHeader").ToList();
 
-                    int conflictIndex = 0;
+                    int clashIndex = 0;
 
                     for (int i = 0; i < generalHeaderColumns.Count; i++)
                     {
                         if (generalHeaderColumns[i].InnerHtml == "Наименование конфликта")
                         {
-                            conflictIndex = i;
+                            clashIndex = i;
                             break;
                         }
                     }
@@ -123,7 +123,7 @@ namespace RevitApp.Plugin.ClashManagement
                         }
                     }
 
-                    Dictionary<string, List<ClashElement>> conflicts = new Dictionary<string, List<ClashElement>>();
+                    Dictionary<string, List<ClashElement>> clashes = new Dictionary<string, List<ClashElement>>();
 
                     var contentRows = mainTableRows.Where(i => i.ClassName == "contentRow").ToList();
 
@@ -139,34 +139,34 @@ namespace RevitApp.Plugin.ClashManagement
 
                         var contentColumns = contentRow.Children;
 
-                        var conflict = contentColumns[conflictIndex].InnerHtml;
+                        var clashName = contentColumns[clashIndex].InnerHtml;
 
-                        var item1ContentColumns = contentColumns.Where(c => c.ClassName == "элемент1Содержимое").ToList();
+                        var element1ContentColumns = contentColumns.Where(c => c.ClassName == "элемент1Содержимое").ToList();
 
-                        int id1 = int.Parse(item1ContentColumns[itemIdIndex].InnerHtml);
+                        int clashElementId1 = int.Parse(element1ContentColumns[itemIdIndex].InnerHtml);
 
-                        string model1 = item1ContentColumns[itemModelIndex].InnerHtml;
+                        string modelName1 = element1ContentColumns[itemModelIndex].InnerHtml;
 
-                        var clashElement1 = new ClashElement(conflict, id1, model1);
+                        var clashElement1 = new ClashElement(clashName, clashElementId1, modelName1);
 
                         clashElements.Add(clashElement1);
 
-                        var item2ContentColumns = contentColumns.Where(c => c.ClassName == "элемент2Содержимое").ToList();
+                        var element2ContentColumns = contentColumns.Where(c => c.ClassName == "элемент2Содержимое").ToList();
 
-                        int id2 = int.Parse(item2ContentColumns[itemIdIndex].InnerHtml);
+                        int clashElemenId2 = int.Parse(element2ContentColumns[itemIdIndex].InnerHtml);
 
-                        string model2 = item2ContentColumns[itemModelIndex].InnerHtml;
+                        string modelName2 = element2ContentColumns[itemModelIndex].InnerHtml;
 
-                        var clashElement2 = new ClashElement(conflict, id2, model2);
+                        var clashElement2 = new ClashElement(clashName, clashElemenId2, modelName2);
 
                         clashElements.Add(clashElement2);
 
-                        conflicts.Add(conflict, clashElements);
+                        clashes.Add(clashName, clashElements);
                     }
 
-                    foreach (var conflict in conflicts)
+                    foreach (var conflict in clashes)
                     {
-                        var conflictNumber = conflict.Key;
+                        var clashName = conflict.Key;
 
                         var clashElement1 = conflict.Value[0];
                         var clashElement2 = conflict.Value[1];
@@ -174,8 +174,8 @@ namespace RevitApp.Plugin.ClashManagement
                         var modelName1 = clashElement1.Model;
                         var modelName2 = clashElement2.Model;
 
-                        var id1 = new ElementId(clashElement1.Id);
-                        var id2 = new ElementId(clashElement2.Id);
+                        var clashElementId1 = new ElementId(clashElement1.Id);
+                        var clashElementId2 = new ElementId(clashElement2.Id);
 
                         if (modelName1.Contains(docTitle) && modelName2.Contains(docTitle))
                         {
@@ -184,8 +184,8 @@ namespace RevitApp.Plugin.ClashManagement
 
                             try
                             {
-                                element1 = doc.GetElement(id1);
-                                element2 = doc.GetElement(id2);
+                                element1 = doc.GetElement(clashElementId1);
+                                element2 = doc.GetElement(clashElementId2);
                             }
                             catch (NullReferenceException e)
                             {
@@ -229,12 +229,12 @@ namespace RevitApp.Plugin.ClashManagement
                                                 indicatorInstance.Pinned = true;
 
                                                 indicatorInstance.LookupParameter("V Наименование отчета").Set(reportName);
-                                                indicatorInstance.LookupParameter("V Наименование конфликта").Set(conflictNumber);
+                                                indicatorInstance.LookupParameter("V Наименование конфликта").Set(clashName);
 
-                                                indicatorInstance.LookupParameter("V Идентификатор 1").Set(id1.ToString());
+                                                indicatorInstance.LookupParameter("V Идентификатор 1").Set(clashElementId1.ToString());
                                                 indicatorInstance.LookupParameter("V Модель 1").Set(modelName1);
 
-                                                indicatorInstance.LookupParameter("V Идентификатор 2").Set(id2.ToString());
+                                                indicatorInstance.LookupParameter("V Идентификатор 2").Set(clashElementId2.ToString());
                                                 indicatorInstance.LookupParameter("V Модель 2").Set(modelName2);
 
                                                 transaction.Commit();
@@ -258,8 +258,8 @@ namespace RevitApp.Plugin.ClashManagement
 
                                 try
                                 {
-                                    element1 = doc.GetElement(id1);
-                                    element2 = doc.GetElement(id2);
+                                    element1 = doc.GetElement(clashElementId1);
+                                    element2 = linkDoc.GetElement(clashElementId2);
                                 }
                                 catch (NullReferenceException e)
                                 {
@@ -303,12 +303,12 @@ namespace RevitApp.Plugin.ClashManagement
                                                     indicatorInstance.Pinned = true;
 
                                                     indicatorInstance.LookupParameter("V Наименование отчета").Set(reportName);
-                                                    indicatorInstance.LookupParameter("V Наименование конфликта").Set(conflictNumber);
+                                                    indicatorInstance.LookupParameter("V Наименование конфликта").Set(clashName);
 
-                                                    indicatorInstance.LookupParameter("V Идентификатор 1").Set(id1.ToString());
+                                                    indicatorInstance.LookupParameter("V Идентификатор 1").Set(clashElementId1.ToString());
                                                     indicatorInstance.LookupParameter("V Модель 1").Set(modelName1);
 
-                                                    indicatorInstance.LookupParameter("V Идентификатор 2").Set(id2.ToString());
+                                                    indicatorInstance.LookupParameter("V Идентификатор 2").Set(clashElementId2.ToString());
                                                     indicatorInstance.LookupParameter("V Модель 2").Set(modelName2);
 
                                                     transaction.Commit();
@@ -333,8 +333,8 @@ namespace RevitApp.Plugin.ClashManagement
 
                                 try
                                 {
-                                    element1 = doc.GetElement(id1);
-                                    element2 = doc.GetElement(id2);
+                                    element1 = linkDoc.GetElement(clashElementId1);
+                                    element2 = doc.GetElement(clashElementId2);
                                 }
                                 catch (NullReferenceException e)
                                 {
@@ -378,12 +378,12 @@ namespace RevitApp.Plugin.ClashManagement
                                                     indicatorInstance.Pinned = true;
 
                                                     indicatorInstance.LookupParameter("V Наименование отчета").Set(reportName);
-                                                    indicatorInstance.LookupParameter("V Наименование конфликта").Set(conflictNumber);
+                                                    indicatorInstance.LookupParameter("V Наименование конфликта").Set(clashName);
 
-                                                    indicatorInstance.LookupParameter("V Идентификатор 1").Set(id1.ToString());
+                                                    indicatorInstance.LookupParameter("V Идентификатор 1").Set(clashElementId1.ToString());
                                                     indicatorInstance.LookupParameter("V Модель 1").Set(modelName1);
 
-                                                    indicatorInstance.LookupParameter("V Идентификатор 2").Set(id2.ToString());
+                                                    indicatorInstance.LookupParameter("V Идентификатор 2").Set(clashElementId2.ToString());
                                                     indicatorInstance.LookupParameter("V Модель 2").Set(modelName2);
 
                                                     transaction.Commit();
