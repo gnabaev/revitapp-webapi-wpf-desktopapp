@@ -1,7 +1,7 @@
 ﻿using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
+using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
-using Autodesk.Revit.Exceptions;
 using Autodesk.Revit.UI;
 using Microsoft.Win32;
 using System;
@@ -12,6 +12,7 @@ using System.Text;
 
 namespace RevitApp.Plugin.ClashManagement
 {
+    [Transaction(TransactionMode.Manual)]
     public class ClashIndicatorPlacementCmd : IExternalCommand
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
