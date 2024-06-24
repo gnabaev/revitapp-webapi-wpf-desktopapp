@@ -54,7 +54,7 @@ namespace RevitApp.Plugin.ClashManagement
 
             if (rvtLinks.Count == 0)
             {
-                TaskDialog.Show("Ошибка", $"В документе \"{docTitle}\" отсутствуют RVT-связи. Загрузите необходимые RVT-связи и повторите попытку.");
+                TaskDialog.Show("Ошибка", $"В документе \"{docTitle}\" отсутствуют RVT-связи. Загрузите минимум одну RVT-связь для размещения индикаторов коллизий.");
                 return Result.Cancelled;
             }
 
@@ -240,63 +240,64 @@ namespace RevitApp.Plugin.ClashManagement
 
                         else if (modelName1 != modelName2 && modelName1.Contains(docTitle))
                         {
-                            var filteredRvtLinks = rvtLinks.Where(l => l.Name.Contains(modelName2));
+                            var linkDocs = rvtLinks.Select(l => l.GetLinkDocument()).Where(d => d.Title.Contains(modelName2)).ToList();
 
-                            foreach (var link in filteredRvtLinks)
+                            if (linkDocs.Count > 0)
                             {
-                                var linkDoc = link.GetLinkDocument();
-
-                                var element1 = doc.GetElement(clashElementId1);
-                                var element2 = linkDoc.GetElement(clashElementId2);
-
-                                if (element1 != null && element2 != null)
+                                foreach (var linkDoc in linkDocs)
                                 {
-                                    Options options = new Options();
-                                    options.ComputeReferences = false;
-                                    options.IncludeNonVisibleObjects = false;
+                                    var element1 = doc.GetElement(clashElementId1);
+                                    var element2 = linkDoc.GetElement(clashElementId2);
 
-                                    GeometryElement geometryElement1 = element1.get_Geometry(options);
-                                    GeometryElement geometryElement2 = element2.get_Geometry(options);
-
-                                    foreach (GeometryObject geometryObject1 in geometryElement1)
+                                    if (element1 != null && element2 != null)
                                     {
-                                        foreach (GeometryObject geometryObject2 in geometryElement2)
+                                        Options options = new Options();
+                                        options.ComputeReferences = false;
+                                        options.IncludeNonVisibleObjects = false;
+
+                                        GeometryElement geometryElement1 = element1.get_Geometry(options);
+                                        GeometryElement geometryElement2 = element2.get_Geometry(options);
+
+                                        foreach (GeometryObject geometryObject1 in geometryElement1)
                                         {
-                                            // Transform both geometry objects to solid
-                                            Solid solid1 = geometryObject1 as Solid;
-                                            Solid solid2 = geometryObject2 as Solid;
-
-                                            if (solid1 != null && solid2 != null)
+                                            foreach (GeometryObject geometryObject2 in geometryElement2)
                                             {
-                                                // Perform a boolean operation to find the intersection
-                                                Solid intersectionSolid = BooleanOperationsUtils.ExecuteBooleanOperation(solid1, solid2, BooleanOperationsType.Intersect);
+                                                // Transform both geometry objects to solid
+                                                Solid solid1 = geometryObject1 as Solid;
+                                                Solid solid2 = geometryObject2 as Solid;
 
-                                                if (intersectionSolid != null && intersectionSolid.Volume > 0)
+                                                if (solid1 != null && solid2 != null)
                                                 {
-                                                    XYZ centroid = intersectionSolid.ComputeCentroid();
+                                                    // Perform a boolean operation to find the intersection
+                                                    Solid intersectionSolid = BooleanOperationsUtils.ExecuteBooleanOperation(solid1, solid2, BooleanOperationsType.Intersect);
 
-                                                    using (Transaction transaction = new Transaction(doc))
+                                                    if (intersectionSolid != null && intersectionSolid.Volume > 0)
                                                     {
-                                                        transaction.Start("Indicator placement");
+                                                        XYZ centroid = intersectionSolid.ComputeCentroid();
 
-                                                        if (!indicatorSymbol.IsActive)
+                                                        using (Transaction transaction = new Transaction(doc))
                                                         {
-                                                            indicatorSymbol.Activate();
+                                                            transaction.Start("Indicator placement");
+
+                                                            if (!indicatorSymbol.IsActive)
+                                                            {
+                                                                indicatorSymbol.Activate();
+                                                            }
+
+                                                            var indicatorInstance = doc.Create.NewFamilyInstance(centroid, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                                            indicatorInstance.Pinned = true;
+
+                                                            indicatorInstance.LookupParameter("V Наименование отчета").Set(reportName);
+                                                            indicatorInstance.LookupParameter("V Наименование конфликта").Set(clashName);
+
+                                                            indicatorInstance.LookupParameter("V Идентификатор 1").Set(clashElementId1.ToString());
+                                                            indicatorInstance.LookupParameter("V Модель 1").Set(modelName1);
+
+                                                            indicatorInstance.LookupParameter("V Идентификатор 2").Set(clashElementId2.ToString());
+                                                            indicatorInstance.LookupParameter("V Модель 2").Set(modelName2);
+
+                                                            transaction.Commit();
                                                         }
-
-                                                        var indicatorInstance = doc.Create.NewFamilyInstance(centroid, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-                                                        indicatorInstance.Pinned = true;
-
-                                                        indicatorInstance.LookupParameter("V Наименование отчета").Set(reportName);
-                                                        indicatorInstance.LookupParameter("V Наименование конфликта").Set(clashName);
-
-                                                        indicatorInstance.LookupParameter("V Идентификатор 1").Set(clashElementId1.ToString());
-                                                        indicatorInstance.LookupParameter("V Модель 1").Set(modelName1);
-
-                                                        indicatorInstance.LookupParameter("V Идентификатор 2").Set(clashElementId2.ToString());
-                                                        indicatorInstance.LookupParameter("V Модель 2").Set(modelName2);
-
-                                                        transaction.Commit();
                                                     }
                                                 }
                                             }
@@ -308,63 +309,64 @@ namespace RevitApp.Plugin.ClashManagement
 
                         else if (modelName1 != modelName2 && modelName2.Contains(docTitle))
                         {
-                            var filteredRvtLinks = rvtLinks.Where(l => l.Name.Contains(modelName1));
+                            var linkDocs = rvtLinks.Select(l => l.GetLinkDocument()).Where(d => d.Title.Contains(modelName1)).ToList();
 
-                            foreach (var link in filteredRvtLinks)
+                            if (linkDocs.Count > 0)
                             {
-                                var linkDoc = link.GetLinkDocument();
-
-                                var element1 = linkDoc.GetElement(clashElementId1);
-                                var element2 = doc.GetElement(clashElementId2);
-
-                                if (element1 != null && element2 != null)
+                                foreach (var linkDoc in linkDocs)
                                 {
-                                    Options options = new Options();
-                                    options.ComputeReferences = false;
-                                    options.IncludeNonVisibleObjects = false;
+                                    var element1 = linkDoc.GetElement(clashElementId1);
+                                    var element2 = doc.GetElement(clashElementId2);
 
-                                    GeometryElement geometryElement1 = element1.get_Geometry(options);
-                                    GeometryElement geometryElement2 = element2.get_Geometry(options);
-
-                                    foreach (GeometryObject geometryObject1 in geometryElement1)
+                                    if (element1 != null && element2 != null)
                                     {
-                                        foreach (GeometryObject geometryObject2 in geometryElement2)
+                                        Options options = new Options();
+                                        options.ComputeReferences = false;
+                                        options.IncludeNonVisibleObjects = false;
+
+                                        GeometryElement geometryElement1 = element1.get_Geometry(options);
+                                        GeometryElement geometryElement2 = element2.get_Geometry(options);
+
+                                        foreach (GeometryObject geometryObject1 in geometryElement1)
                                         {
-                                            // Transform both geometry objects to solid
-                                            Solid solid1 = geometryObject1 as Solid;
-                                            Solid solid2 = geometryObject2 as Solid;
-
-                                            if (solid1 != null && solid2 != null)
+                                            foreach (GeometryObject geometryObject2 in geometryElement2)
                                             {
-                                                // Perform a boolean operation to find the intersection
-                                                Solid intersectionSolid = BooleanOperationsUtils.ExecuteBooleanOperation(solid1, solid2, BooleanOperationsType.Intersect);
+                                                // Transform both geometry objects to solid
+                                                Solid solid1 = geometryObject1 as Solid;
+                                                Solid solid2 = geometryObject2 as Solid;
 
-                                                if (intersectionSolid != null && intersectionSolid.Volume > 0)
+                                                if (solid1 != null && solid2 != null)
                                                 {
-                                                    XYZ centroid = intersectionSolid.ComputeCentroid();
+                                                    // Perform a boolean operation to find the intersection
+                                                    Solid intersectionSolid = BooleanOperationsUtils.ExecuteBooleanOperation(solid1, solid2, BooleanOperationsType.Intersect);
 
-                                                    using (Transaction transaction = new Transaction(doc))
+                                                    if (intersectionSolid != null && intersectionSolid.Volume > 0)
                                                     {
-                                                        transaction.Start("Indicator placement");
+                                                        XYZ centroid = intersectionSolid.ComputeCentroid();
 
-                                                        if (!indicatorSymbol.IsActive)
+                                                        using (Transaction transaction = new Transaction(doc))
                                                         {
-                                                            indicatorSymbol.Activate();
+                                                            transaction.Start("Indicator placement");
+
+                                                            if (!indicatorSymbol.IsActive)
+                                                            {
+                                                                indicatorSymbol.Activate();
+                                                            }
+
+                                                            var indicatorInstance = doc.Create.NewFamilyInstance(centroid, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                                            indicatorInstance.Pinned = true;
+
+                                                            indicatorInstance.LookupParameter("V Наименование отчета").Set(reportName);
+                                                            indicatorInstance.LookupParameter("V Наименование конфликта").Set(clashName);
+
+                                                            indicatorInstance.LookupParameter("V Идентификатор 1").Set(clashElementId1.ToString());
+                                                            indicatorInstance.LookupParameter("V Модель 1").Set(modelName1);
+
+                                                            indicatorInstance.LookupParameter("V Идентификатор 2").Set(clashElementId2.ToString());
+                                                            indicatorInstance.LookupParameter("V Модель 2").Set(modelName2);
+
+                                                            transaction.Commit();
                                                         }
-
-                                                        var indicatorInstance = doc.Create.NewFamilyInstance(centroid, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-                                                        indicatorInstance.Pinned = true;
-
-                                                        indicatorInstance.LookupParameter("V Наименование отчета").Set(reportName);
-                                                        indicatorInstance.LookupParameter("V Наименование конфликта").Set(clashName);
-
-                                                        indicatorInstance.LookupParameter("V Идентификатор 1").Set(clashElementId1.ToString());
-                                                        indicatorInstance.LookupParameter("V Модель 1").Set(modelName1);
-
-                                                        indicatorInstance.LookupParameter("V Идентификатор 2").Set(clashElementId2.ToString());
-                                                        indicatorInstance.LookupParameter("V Модель 2").Set(modelName2);
-
-                                                        transaction.Commit();
                                                     }
                                                 }
                                             }
