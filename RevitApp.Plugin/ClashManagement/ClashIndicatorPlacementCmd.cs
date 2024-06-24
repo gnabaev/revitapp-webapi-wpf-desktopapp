@@ -184,8 +184,8 @@ namespace RevitApp.Plugin.ClashManagement
                             if (element1 != null && element2 != null)
                             {
                                 // Transform both geometry objects to solid
-                                var solid1 = GetElementSolids(element1).FirstOrDefault();
-                                var solid2 = GetElementSolids(element2).FirstOrDefault();
+                                var solid1 = GetSolid(element1);
+                                var solid2 = GetSolid(element2);
 
                                 if (solid1 != null && solid2 != null)
                                 {
@@ -238,8 +238,8 @@ namespace RevitApp.Plugin.ClashManagement
                                     if (element1 != null && element2 != null)
                                     {
                                         // Transform both geometry objects to solid
-                                        var solid1 = GetElementSolids(element1).FirstOrDefault();
-                                        var solid2 = GetElementSolids(element2).FirstOrDefault();
+                                        var solid1 = GetSolid(element1);
+                                        var solid2 = GetSolid(element2);
 
                                         if (solid1 != null && solid2 != null)
                                         {
@@ -294,8 +294,8 @@ namespace RevitApp.Plugin.ClashManagement
                                     if (element1 != null && element2 != null)
                                     {
                                         // Transform both geometry objects to solid
-                                        var solid1 = GetElementSolids(element1).FirstOrDefault();
-                                        var solid2 = GetElementSolids(element2).FirstOrDefault();
+                                        var solid1 = GetSolid(element1);
+                                        var solid2 = GetSolid(element2);
 
                                         if (solid1 != null && solid2 != null)
                                         {
@@ -353,7 +353,7 @@ namespace RevitApp.Plugin.ClashManagement
             return Result.Succeeded;
         }
 
-        private IEnumerable<Solid> GetElementSolids(Element element)
+        private Solid GetSolid(Element element)
         {
             List<Solid> solids = new List<Solid>();
 
@@ -398,7 +398,30 @@ namespace RevitApp.Plugin.ClashManagement
                 }
             }
 
-            return solids;
+            Solid result = GetCombinedSolid(solids);
+
+            return result;
+        }
+
+        private Solid GetCombinedSolid(IEnumerable<Solid> solids)
+        {
+            Solid combinedSolid;
+
+            if (solids.Count() == 1)
+            {
+                combinedSolid = solids.FirstOrDefault();
+            }
+            else
+            {
+                combinedSolid = solids.FirstOrDefault();
+
+                for (int i = 1; i < solids.Count(); i++)
+                {
+                    combinedSolid = BooleanOperationsUtils.ExecuteBooleanOperation(combinedSolid, solids.ElementAt(i), BooleanOperationsType.Union);
+                }
+            }
+
+            return combinedSolid;
         }
     }
 }
