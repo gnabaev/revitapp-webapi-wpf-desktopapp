@@ -2,6 +2,7 @@
 using AngleSharp.Html.Parser;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.Exceptions;
 using Autodesk.Revit.UI;
 using Microsoft.Win32;
 using System.Collections.Generic;
@@ -60,8 +61,8 @@ namespace RevitApp.Plugin.ClashManagement
             OpenFileDialog openFileDialog = new OpenFileDialog();
 
             openFileDialog.Filter = "HTML Files (*.html)|*.html";
-            openFileDialog.Multiselect = true;
-            openFileDialog.Title = "Открыть HTML файлы";
+            openFileDialog.Multiselect = false;
+            openFileDialog.Title = "Открыть HTML файл";
 
             bool? result = openFileDialog.ShowDialog();
 
@@ -163,12 +164,12 @@ namespace RevitApp.Plugin.ClashManagement
                         clashes.Add(clashName, clashElements);
                     }
 
-                    foreach (var conflict in clashes)
+                    foreach (var clash in clashes)
                     {
-                        var clashName = conflict.Key;
+                        var clashName = clash.Key;
 
-                        var clashElement1 = conflict.Value[0];
-                        var clashElement2 = conflict.Value[1];
+                        var clashElement1 = clash.Value[0];
+                        var clashElement2 = clash.Value[1];
 
                         var modelName1 = clashElement1.Model;
                         var modelName2 = clashElement2.Model;
@@ -189,8 +190,17 @@ namespace RevitApp.Plugin.ClashManagement
 
                                 if (solid1 != null && solid2 != null)
                                 {
-                                    // Perform a boolean operation to find the intersection
-                                    Solid intersectionSolid = BooleanOperationsUtils.ExecuteBooleanOperation(solid1, solid2, BooleanOperationsType.Intersect);
+                                    Solid intersectionSolid;
+
+                                    try
+                                    {
+                                        // Perform a boolean operation to find the intersection of two solids. If the operation can't be done, then the clash is skipped.  
+                                        intersectionSolid = BooleanOperationsUtils.ExecuteBooleanOperation(solid1, solid2, BooleanOperationsType.Intersect);
+                                    }
+                                    catch (InvalidOperationException)
+                                    {
+                                        continue;
+                                    }
 
                                     if (intersectionSolid != null && intersectionSolid.Volume > 0)
                                     {
@@ -198,7 +208,7 @@ namespace RevitApp.Plugin.ClashManagement
 
                                         using (Transaction transaction = new Transaction(doc))
                                         {
-                                            transaction.Start("Indicator placement");
+                                            transaction.Start("Размещение индикатора коллизии");
 
                                             if (!indicatorSymbol.IsActive)
                                             {
@@ -243,8 +253,17 @@ namespace RevitApp.Plugin.ClashManagement
 
                                         if (solid1 != null && solid2 != null)
                                         {
-                                            // Perform a boolean operation to find the intersection
-                                            Solid intersectionSolid = BooleanOperationsUtils.ExecuteBooleanOperation(solid1, solid2, BooleanOperationsType.Intersect);
+                                            Solid intersectionSolid;
+
+                                            try
+                                            {
+                                                // Perform a boolean operation to find the intersection of two solids. If the operation can't be done, then the clash is skipped.  
+                                                intersectionSolid = BooleanOperationsUtils.ExecuteBooleanOperation(solid1, solid2, BooleanOperationsType.Intersect);
+                                            }
+                                            catch (InvalidOperationException)
+                                            {
+                                                continue;
+                                            }
 
                                             if (intersectionSolid != null && intersectionSolid.Volume > 0)
                                             {
@@ -252,7 +271,7 @@ namespace RevitApp.Plugin.ClashManagement
 
                                                 using (Transaction transaction = new Transaction(doc))
                                                 {
-                                                    transaction.Start("Indicator placement");
+                                                    transaction.Start("Размещение индикатора коллизии");
 
                                                     if (!indicatorSymbol.IsActive)
                                                     {
@@ -299,8 +318,17 @@ namespace RevitApp.Plugin.ClashManagement
 
                                         if (solid1 != null && solid2 != null)
                                         {
-                                            // Perform a boolean operation to find the intersection
-                                            Solid intersectionSolid = BooleanOperationsUtils.ExecuteBooleanOperation(solid1, solid2, BooleanOperationsType.Intersect);
+                                            Solid intersectionSolid;
+
+                                            try
+                                            {
+                                                // Perform a boolean operation to find the intersection of two solids. If the operation can't be done, then the clash is skipped.  
+                                                intersectionSolid = BooleanOperationsUtils.ExecuteBooleanOperation(solid1, solid2, BooleanOperationsType.Intersect);
+                                            }
+                                            catch (InvalidOperationException)
+                                            {
+                                                continue;
+                                            }
 
                                             if (intersectionSolid != null && intersectionSolid.Volume > 0)
                                             {
@@ -308,7 +336,7 @@ namespace RevitApp.Plugin.ClashManagement
 
                                                 using (Transaction transaction = new Transaction(doc))
                                                 {
-                                                    transaction.Start("Indicator placement");
+                                                    transaction.Start("Размещение индикатора коллизии");
 
                                                     if (!indicatorSymbol.IsActive)
                                                     {
@@ -417,7 +445,15 @@ namespace RevitApp.Plugin.ClashManagement
 
                 for (int i = 1; i < solids.Count(); i++)
                 {
-                    combinedSolid = BooleanOperationsUtils.ExecuteBooleanOperation(combinedSolid, solids.ElementAt(i), BooleanOperationsType.Union);
+                    try
+                    {
+                        // Try to combine solids to one solid. If the current solid can't be combined with the previous solid, then it is skipped.
+                        combinedSolid = BooleanOperationsUtils.ExecuteBooleanOperation(combinedSolid, solids.ElementAt(i), BooleanOperationsType.Union);
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        continue;
+                    }
                 }
             }
 
