@@ -218,14 +218,7 @@ namespace RevitApp.Plugin.ClashManagement
                                             var indicatorInstance = doc.Create.NewFamilyInstance(centroid, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
                                             indicatorInstance.Pinned = true;
 
-                                            indicatorInstance.LookupParameter("V Наименование отчета").Set(reportName);
-                                            indicatorInstance.LookupParameter("V Наименование конфликта").Set(clashName);
-
-                                            indicatorInstance.LookupParameter("V Идентификатор 1").Set(clashElementId1.ToString());
-                                            indicatorInstance.LookupParameter("V Модель 1").Set(modelName1);
-
-                                            indicatorInstance.LookupParameter("V Идентификатор 2").Set(clashElementId2.ToString());
-                                            indicatorInstance.LookupParameter("V Модель 2").Set(modelName2);
+                                            FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
 
                                             transaction.Commit();
                                         }
@@ -281,14 +274,7 @@ namespace RevitApp.Plugin.ClashManagement
                                                     var indicatorInstance = doc.Create.NewFamilyInstance(centroid, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
                                                     indicatorInstance.Pinned = true;
 
-                                                    indicatorInstance.LookupParameter("V Наименование отчета").Set(reportName);
-                                                    indicatorInstance.LookupParameter("V Наименование конфликта").Set(clashName);
-
-                                                    indicatorInstance.LookupParameter("V Идентификатор 1").Set(clashElementId1.ToString());
-                                                    indicatorInstance.LookupParameter("V Модель 1").Set(modelName1);
-
-                                                    indicatorInstance.LookupParameter("V Идентификатор 2").Set(clashElementId2.ToString());
-                                                    indicatorInstance.LookupParameter("V Модель 2").Set(modelName2);
+                                                    FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
 
                                                     transaction.Commit();
                                                 }
@@ -346,14 +332,7 @@ namespace RevitApp.Plugin.ClashManagement
                                                     var indicatorInstance = doc.Create.NewFamilyInstance(centroid, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
                                                     indicatorInstance.Pinned = true;
 
-                                                    indicatorInstance.LookupParameter("V Наименование отчета").Set(reportName);
-                                                    indicatorInstance.LookupParameter("V Наименование конфликта").Set(clashName);
-
-                                                    indicatorInstance.LookupParameter("V Идентификатор 1").Set(clashElementId1.ToString());
-                                                    indicatorInstance.LookupParameter("V Модель 1").Set(modelName1);
-
-                                                    indicatorInstance.LookupParameter("V Идентификатор 2").Set(clashElementId2.ToString());
-                                                    indicatorInstance.LookupParameter("V Модель 2").Set(modelName2);
+                                                    FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
 
                                                     transaction.Commit();
                                                 }
@@ -379,6 +358,21 @@ namespace RevitApp.Plugin.ClashManagement
             }
 
             return Result.Succeeded;
+        }
+
+        private void FillClashIndicatorInfo(FamilyInstance clashIndicator, string reportName, string clashName, ElementId clashElementId1, string modelName1, ElementId clashElementId2, string modelName2)
+        {
+            if (clashIndicator != null)
+            {
+                clashIndicator.LookupParameter("V Наименование отчета").Set(reportName);
+                clashIndicator.LookupParameter("V Наименование конфликта").Set(clashName);
+
+                clashIndicator.LookupParameter("V Идентификатор 1").Set(clashElementId1.ToString());
+                clashIndicator.LookupParameter("V Модель 1").Set(modelName1);
+
+                clashIndicator.LookupParameter("V Идентификатор 2").Set(clashElementId2.ToString());
+                clashIndicator.LookupParameter("V Модель 2").Set(modelName2);
+            }
         }
 
         private Solid GetSolid(Element element)
