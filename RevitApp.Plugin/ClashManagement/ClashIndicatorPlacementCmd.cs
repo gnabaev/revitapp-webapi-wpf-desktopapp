@@ -229,56 +229,59 @@ namespace RevitApp.Plugin.ClashManagement
 
                         else if (modelName1 != modelName2 && modelName1.Contains(docTitle))
                         {
-                            var linkDocs = rvtLinks.Select(l => l.GetLinkDocument()).Where(d => modelName2.Contains(d.Title)).ToList();
+                            Document linkDoc;
 
-                            if (linkDocs.Count > 0)
+                            try
                             {
-                                foreach (var linkDoc in linkDocs)
+                                linkDoc = rvtLinks.Select(l => l.GetLinkDocument()).FirstOrDefault(d => modelName2.Contains(d.Title));
+                            }
+                            catch (System.NullReferenceException)
+                            {
+                                continue;
+                            }
+
+                            var element1 = linkDoc.GetElement(clashElementId1);
+                            var element2 = linkDoc.GetElement(clashElementId2);
+
+                            if (element1 != null && element2 != null)
+                            {
+                                // Transform both geometry objects to solid
+                                var solid1 = GetSolid(element1);
+                                var solid2 = GetSolid(element2);
+
+                                if (solid1 != null && solid2 != null)
                                 {
-                                    var element1 = doc.GetElement(clashElementId1);
-                                    var element2 = linkDoc.GetElement(clashElementId2);
+                                    Solid intersectionSolid;
 
-                                    if (element1 != null && element2 != null)
+                                    try
                                     {
-                                        // Transform both geometry objects to solid
-                                        var solid1 = GetSolid(element1);
-                                        var solid2 = GetSolid(element2);
+                                        // Perform a boolean operation to find the intersection of two solids. If the operation can't be done, then the clash is skipped.  
+                                        intersectionSolid = BooleanOperationsUtils.ExecuteBooleanOperation(solid1, solid2, BooleanOperationsType.Intersect);
+                                    }
+                                    catch (InvalidOperationException)
+                                    {
+                                        continue;
+                                    }
 
-                                        if (solid1 != null && solid2 != null)
+                                    if (intersectionSolid != null && intersectionSolid.Volume > 0)
+                                    {
+                                        XYZ centroid = intersectionSolid.ComputeCentroid();
+
+                                        using (Transaction transaction = new Transaction(linkDoc))
                                         {
-                                            Solid intersectionSolid;
+                                            transaction.Start("Размещение индикатора коллизии");
 
-                                            try
+                                            if (!indicatorSymbol.IsActive)
                                             {
-                                                // Perform a boolean operation to find the intersection of two solids. If the operation can't be done, then the clash is skipped.  
-                                                intersectionSolid = BooleanOperationsUtils.ExecuteBooleanOperation(solid1, solid2, BooleanOperationsType.Intersect);
-                                            }
-                                            catch (InvalidOperationException)
-                                            {
-                                                continue;
+                                                indicatorSymbol.Activate();
                                             }
 
-                                            if (intersectionSolid != null && intersectionSolid.Volume > 0)
-                                            {
-                                                XYZ centroid = intersectionSolid.ComputeCentroid();
+                                            var indicatorInstance = linkDoc.Create.NewFamilyInstance(centroid, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                            indicatorInstance.Pinned = true;
 
-                                                using (Transaction transaction = new Transaction(doc))
-                                                {
-                                                    transaction.Start("Размещение индикатора коллизии");
+                                            FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
 
-                                                    if (!indicatorSymbol.IsActive)
-                                                    {
-                                                        indicatorSymbol.Activate();
-                                                    }
-
-                                                    var indicatorInstance = doc.Create.NewFamilyInstance(centroid, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-                                                    indicatorInstance.Pinned = true;
-
-                                                    FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
-
-                                                    transaction.Commit();
-                                                }
-                                            }
+                                            transaction.Commit();
                                         }
                                     }
                                 }
@@ -287,56 +290,59 @@ namespace RevitApp.Plugin.ClashManagement
 
                         else if (modelName1 != modelName2 && modelName2.Contains(docTitle))
                         {
-                            var linkDocs = rvtLinks.Select(l => l.GetLinkDocument()).Where(d => modelName1.Contains(d.Title)).ToList();
+                            Document linkDoc;
 
-                            if (linkDocs.Count > 0)
+                            try
                             {
-                                foreach (var linkDoc in linkDocs)
+                                linkDoc = rvtLinks.Select(l => l.GetLinkDocument()).FirstOrDefault(d => modelName1.Contains(d.Title));
+                            }
+                            catch (System.NullReferenceException)
+                            {
+                                continue;
+                            }
+
+                            var element1 = linkDoc.GetElement(clashElementId1);
+                            var element2 = doc.GetElement(clashElementId2);
+
+                            if (element1 != null && element2 != null)
+                            {
+                                // Transform both geometry objects to solid
+                                var solid1 = GetSolid(element1);
+                                var solid2 = GetSolid(element2);
+
+                                if (solid1 != null && solid2 != null)
                                 {
-                                    var element1 = linkDoc.GetElement(clashElementId1);
-                                    var element2 = doc.GetElement(clashElementId2);
+                                    Solid intersectionSolid;
 
-                                    if (element1 != null && element2 != null)
+                                    try
                                     {
-                                        // Transform both geometry objects to solid
-                                        var solid1 = GetSolid(element1);
-                                        var solid2 = GetSolid(element2);
+                                        // Perform a boolean operation to find the intersection of two solids. If the operation can't be done, then the clash is skipped.  
+                                        intersectionSolid = BooleanOperationsUtils.ExecuteBooleanOperation(solid1, solid2, BooleanOperationsType.Intersect);
+                                    }
+                                    catch (InvalidOperationException)
+                                    {
+                                        continue;
+                                    }
 
-                                        if (solid1 != null && solid2 != null)
+                                    if (intersectionSolid != null && intersectionSolid.Volume > 0)
+                                    {
+                                        XYZ centroid = intersectionSolid.ComputeCentroid();
+
+                                        using (Transaction transaction = new Transaction(doc))
                                         {
-                                            Solid intersectionSolid;
+                                            transaction.Start("Размещение индикатора коллизии");
 
-                                            try
+                                            if (!indicatorSymbol.IsActive)
                                             {
-                                                // Perform a boolean operation to find the intersection of two solids. If the operation can't be done, then the clash is skipped.  
-                                                intersectionSolid = BooleanOperationsUtils.ExecuteBooleanOperation(solid1, solid2, BooleanOperationsType.Intersect);
-                                            }
-                                            catch (InvalidOperationException)
-                                            {
-                                                continue;
+                                                indicatorSymbol.Activate();
                                             }
 
-                                            if (intersectionSolid != null && intersectionSolid.Volume > 0)
-                                            {
-                                                XYZ centroid = intersectionSolid.ComputeCentroid();
+                                            var indicatorInstance = doc.Create.NewFamilyInstance(centroid, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                            indicatorInstance.Pinned = true;
 
-                                                using (Transaction transaction = new Transaction(doc))
-                                                {
-                                                    transaction.Start("Размещение индикатора коллизии");
+                                            FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
 
-                                                    if (!indicatorSymbol.IsActive)
-                                                    {
-                                                        indicatorSymbol.Activate();
-                                                    }
-
-                                                    var indicatorInstance = doc.Create.NewFamilyInstance(centroid, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-                                                    indicatorInstance.Pinned = true;
-
-                                                    FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
-
-                                                    transaction.Commit();
-                                                }
-                                            }
+                                            transaction.Commit();
                                         }
                                     }
                                 }
@@ -345,7 +351,7 @@ namespace RevitApp.Plugin.ClashManagement
 
                         else
                         {
-                            TaskDialog.Show("Предупреждение", $"Выбран неверный отчет \"{reportName}\". В нем обнаружено несоответствие наименований моделей наименованию текущего документа \"{docTitle}\" и связанных моделей. Данный отчет будет пропущен.");
+                            TaskDialog.Show("Предупреждение", $"Выбран неверный отчет \"{reportName}\". По всем коллизиям обнаружено несоответствие наименований моделей наименованию текущего документа \"{docTitle}\" и связанных моделей. Данный отчет будет пропущен.");
                             continue;
                         }
                     }
