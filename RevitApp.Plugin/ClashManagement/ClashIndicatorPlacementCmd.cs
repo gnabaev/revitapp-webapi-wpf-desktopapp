@@ -168,13 +168,7 @@ namespace RevitApp.Plugin.ClashManagement
                                 {
                                     transaction.Start("Размещение индикатора коллизии");
 
-                                    if (!indicatorSymbol.IsActive)
-                                    {
-                                        indicatorSymbol.Activate();
-                                    }
-
-                                    var indicatorInstance = doc.Create.NewFamilyInstance(clashPoint, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-                                    indicatorInstance.Pinned = true;
+                                    var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol);
 
                                     FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
 
@@ -205,13 +199,7 @@ namespace RevitApp.Plugin.ClashManagement
                                 {
                                     transaction.Start("Размещение индикатора коллизии");
 
-                                    if (!indicatorSymbol.IsActive)
-                                    {
-                                        indicatorSymbol.Activate();
-                                    }
-
-                                    var indicatorInstance = doc.Create.NewFamilyInstance(clashPoint, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-                                    indicatorInstance.Pinned = true;
+                                    var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol);
 
                                     FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
 
@@ -242,13 +230,7 @@ namespace RevitApp.Plugin.ClashManagement
                                 {
                                     transaction.Start("Размещение индикатора коллизии");
 
-                                    if (!indicatorSymbol.IsActive)
-                                    {
-                                        indicatorSymbol.Activate();
-                                    }
-
-                                    var indicatorInstance = doc.Create.NewFamilyInstance(clashPoint, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-                                    indicatorInstance.Pinned = true;
+                                    var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol);
 
                                     FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
 
@@ -281,6 +263,19 @@ namespace RevitApp.Plugin.ClashManagement
             var clashPoint = new XYZ(pointCoordinates[0], pointCoordinates[1], pointCoordinates[2]);
 
             return clashPoint;
+        }
+
+        private FamilyInstance PlaceClashIndicator(Document doc, XYZ point, FamilySymbol familySymbol)
+        {
+            if (!familySymbol.IsActive)
+            {
+                familySymbol.Activate();
+            }
+
+            var familyInstance = doc.Create.NewFamilyInstance(point, familySymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+            familyInstance.Pinned = true;
+
+            return familyInstance;
         }
 
         private void FillClashIndicatorInfo(FamilyInstance clashIndicator, string reportName, string clashName, ElementId clashElementId1, string modelName1, ElementId clashElementId2, string modelName2)
