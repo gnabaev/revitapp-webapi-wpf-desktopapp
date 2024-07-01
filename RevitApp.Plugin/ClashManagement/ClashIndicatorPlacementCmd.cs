@@ -2,10 +2,8 @@
 using AngleSharp.Html.Parser;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
-using Autodesk.Revit.Exceptions;
 using Autodesk.Revit.UI;
 using Microsoft.Win32;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -27,7 +25,7 @@ namespace RevitApp.Plugin.ClashManagement
             }
             else
             {
-                int separatorIndex = doc.Title.LastIndexOf('_');
+                var separatorIndex = doc.Title.LastIndexOf('_');
 
                 if (separatorIndex != -1)
                 {
@@ -39,7 +37,7 @@ namespace RevitApp.Plugin.ClashManagement
                 }
             }
 
-            FamilySymbol indicatorSymbol = new FilteredElementCollector(doc)
+            var indicatorSymbol = new FilteredElementCollector(doc)
                 .OfClass(typeof(FamilySymbol))
                 .Cast<FamilySymbol>()
                 .FirstOrDefault(f => f.FamilyName == "Индикатор коллизии");
@@ -58,7 +56,7 @@ namespace RevitApp.Plugin.ClashManagement
                 return Result.Cancelled;
             }
 
-            OpenFileDialog openFileDialog = new OpenFileDialog();
+            var openFileDialog = new OpenFileDialog();
 
             openFileDialog.Filter = "HTML Files (*.html)|*.html";
             openFileDialog.Multiselect = false;
@@ -149,22 +147,15 @@ namespace RevitApp.Plugin.ClashManagement
 
                         var element1ContentColumns = contentColumns.Where(c => c.ClassName == "элемент1Содержимое").ToList();
 
-                        int clashElementStringId1 = int.Parse(element1ContentColumns[itemIdIndex].InnerHtml);
+                        var clashElementId1 = new ElementId(int.Parse(element1ContentColumns[itemIdIndex].InnerHtml));
 
-                        string modelName1 = element1ContentColumns[itemModelIndex].InnerHtml;
-
-                        var clashElement1 = new ClashElement(clashName, clashElementStringId1, modelName1);
+                        var modelName1 = element1ContentColumns[itemModelIndex].InnerHtml;
 
                         var element2ContentColumns = contentColumns.Where(c => c.ClassName == "элемент2Содержимое").ToList();
 
-                        int clashElementStringId2 = int.Parse(element2ContentColumns[itemIdIndex].InnerHtml);
+                        var clashElementId2 = new ElementId(int.Parse(element2ContentColumns[itemIdIndex].InnerHtml));
 
-                        string modelName2 = element2ContentColumns[itemModelIndex].InnerHtml;
-
-                        var clashElement2 = new ClashElement(clashName, clashElementStringId2, modelName2);
-
-                        var clashElementId1 = new ElementId(clashElement1.Id);
-                        var clashElementId2 = new ElementId(clashElement2.Id);
+                        var modelName2 = element2ContentColumns[itemModelIndex].InnerHtml;
 
                         if (modelName1.Contains(docTitle) && modelName2.Contains(docTitle))
                         {
