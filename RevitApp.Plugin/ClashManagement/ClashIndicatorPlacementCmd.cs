@@ -143,11 +143,9 @@ namespace RevitApp.Plugin.ClashManagement
 
                         var clashName = contentColumns[clashIndex].InnerHtml;
 
-                        var clashPoint = contentColumns[pointIndex].InnerHtml;
+                        var clashPointCoordinates = contentColumns[pointIndex].InnerHtml;
 
-                        var pointCoordinates = clashPoint.Split(',').SelectMany(x => x.Trim().Split(':')).Where((x, i) => i % 2 != 0).Select(x => UnitUtils.Convert(double.Parse(x.Replace('.', ',')), UnitTypeId.Meters, UnitTypeId.Feet)).ToArray();
-
-                        var point = new XYZ(pointCoordinates[0], pointCoordinates[1], pointCoordinates[2]);
+                        var clashPoint = GetClashPoint(clashPointCoordinates);
 
                         var element1ContentColumns = contentColumns.Where(c => c.ClassName == "элемент1Содержимое").ToList();
 
@@ -184,7 +182,7 @@ namespace RevitApp.Plugin.ClashManagement
                                         indicatorSymbol.Activate();
                                     }
 
-                                    var indicatorInstance = doc.Create.NewFamilyInstance(point, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                    var indicatorInstance = doc.Create.NewFamilyInstance(clashPoint, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
                                     indicatorInstance.Pinned = true;
 
                                     FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
@@ -221,7 +219,7 @@ namespace RevitApp.Plugin.ClashManagement
                                         indicatorSymbol.Activate();
                                     }
 
-                                    var indicatorInstance = doc.Create.NewFamilyInstance(point, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                    var indicatorInstance = doc.Create.NewFamilyInstance(clashPoint, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
                                     indicatorInstance.Pinned = true;
 
                                     FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
@@ -258,7 +256,7 @@ namespace RevitApp.Plugin.ClashManagement
                                         indicatorSymbol.Activate();
                                     }
 
-                                    var indicatorInstance = doc.Create.NewFamilyInstance(point, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                    var indicatorInstance = doc.Create.NewFamilyInstance(clashPoint, indicatorSymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
                                     indicatorInstance.Pinned = true;
 
                                     FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
@@ -283,6 +281,15 @@ namespace RevitApp.Plugin.ClashManagement
             }
 
             return Result.Succeeded;
+        }
+
+        private XYZ GetClashPoint(string clashPointCoordinates)
+        {
+            var pointCoordinates = clashPointCoordinates.Split(',').SelectMany(x => x.Trim().Split(':')).Where((x, i) => i % 2 != 0).Select(x => UnitUtils.Convert(double.Parse(x.Replace('.', ',')), UnitTypeId.Meters, UnitTypeId.Feet)).ToArray();
+
+            var clashPoint = new XYZ(pointCoordinates[0], pointCoordinates[1], pointCoordinates[2]);
+
+            return clashPoint;
         }
 
         private void FillClashIndicatorInfo(FamilyInstance clashIndicator, string reportName, string clashName, ElementId clashElementId1, string modelName1, ElementId clashElementId2, string modelName2)
