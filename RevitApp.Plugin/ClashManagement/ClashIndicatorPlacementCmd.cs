@@ -15,58 +15,52 @@ namespace RevitApp.Plugin.ClashManagement
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
-            Document doc = commandData.Application.ActiveUIDocument.Document;
+            var fileNames = GetFileNamesFromDialog("Открыть HTML файл", "HTML Files (*.html)|*.html", false);
 
-            string docTitle;
-
-            if (!doc.IsWorkshared)
+            if (fileNames.Length > 0)
             {
-                docTitle = doc.Title;
-            }
-            else
-            {
-                var separatorIndex = doc.Title.LastIndexOf('_');
+                Document doc = commandData.Application.ActiveUIDocument.Document;
 
-                if (separatorIndex != -1)
+                string docTitle;
+
+                if (!doc.IsWorkshared)
                 {
-                    docTitle = doc.Title.Substring(0, separatorIndex);
+                    docTitle = doc.Title;
                 }
                 else
                 {
+                    var separatorIndex = doc.Title.LastIndexOf('_');
+
+                    if (separatorIndex != -1)
+                    {
+                        docTitle = doc.Title.Substring(0, separatorIndex);
+                    }
+                    else
+                    {
+                        return Result.Cancelled;
+                    }
+                }
+
+                var indicatorSymbol = new FilteredElementCollector(doc)
+                    .OfClass(typeof(FamilySymbol))
+                    .Cast<FamilySymbol>()
+                    .FirstOrDefault(f => f.FamilyName == "Индикатор коллизии");
+
+                if (indicatorSymbol == null)
+                {
+                    TaskDialog.Show("Ошибка", $"В документе \"{docTitle}\" отсутствует семейство \"Индикатор коллизии\". Загрузите семейство и повторите попытку.");
                     return Result.Cancelled;
                 }
-            }
 
-            var indicatorSymbol = new FilteredElementCollector(doc)
-                .OfClass(typeof(FamilySymbol))
-                .Cast<FamilySymbol>()
-                .FirstOrDefault(f => f.FamilyName == "Индикатор коллизии");
+                var rvtLinks = new FilteredElementCollector(doc).OfClass(typeof(RevitLinkInstance)).Cast<RevitLinkInstance>().ToList();
 
-            if (indicatorSymbol == null)
-            {
-                TaskDialog.Show("Ошибка", $"В документе \"{docTitle}\" отсутствует семейство \"Индикатор коллизии\". Загрузите семейство и повторите попытку.");
-                return Result.Cancelled;
-            }
+                if (rvtLinks.Count == 0)
+                {
+                    TaskDialog.Show("Ошибка", $"В документе \"{docTitle}\" отсутствуют RVT-связи. Загрузите минимум одну RVT-связь для размещения индикаторов коллизий.");
+                    return Result.Cancelled;
+                }
 
-            var rvtLinks = new FilteredElementCollector(doc).OfClass(typeof(RevitLinkInstance)).Cast<RevitLinkInstance>().ToList();
-
-            if (rvtLinks.Count == 0)
-            {
-                TaskDialog.Show("Ошибка", $"В документе \"{docTitle}\" отсутствуют RVT-связи. Загрузите минимум одну RVT-связь для размещения индикаторов коллизий.");
-                return Result.Cancelled;
-            }
-
-            var openFileDialog = new OpenFileDialog();
-
-            openFileDialog.Filter = "HTML Files (*.html)|*.html";
-            openFileDialog.Multiselect = false;
-            openFileDialog.Title = "Открыть HTML файл";
-
-            bool? result = openFileDialog.ShowDialog();
-
-            if (result == true)
-            {
-                foreach (var fileName in openFileDialog.FileNames)
+                foreach (var fileName in fileNames)
                 {
                     var htmlFile = File.ReadAllText(fileName, Encoding.UTF8);
 
@@ -254,6 +248,26 @@ namespace RevitApp.Plugin.ClashManagement
             }
 
             return Result.Succeeded;
+        }
+
+        public string[] GetFileNamesFromDialog(string title, string filter, bool multiselect)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+
+            openFileDialog.Title = title;
+            openFileDialog.Filter = filter;
+            openFileDialog.Multiselect = multiselect;
+
+            bool? result = openFileDialog.ShowDialog();
+
+            if (result == true)
+            {
+                return openFileDialog.FileNames;
+            }
+            else
+            {
+                return new string[0];
+            }
         }
 
         private XYZ GetClashPoint(string clashPointCoordinates)
