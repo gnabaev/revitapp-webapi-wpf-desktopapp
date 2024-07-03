@@ -7,7 +7,7 @@ using System.Windows.Media.Imaging;
 
 namespace RevitApp.Plugin
 {
-    public class Application : IExternalApplication
+    public class ApplicationUI : IExternalApplication
     {
         public Result OnShutdown(UIControlledApplication application)
         {
