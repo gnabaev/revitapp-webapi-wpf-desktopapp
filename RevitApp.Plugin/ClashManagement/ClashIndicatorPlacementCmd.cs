@@ -21,11 +21,18 @@ namespace RevitApp.Plugin.ClashManagement
             {
                 Document doc = commandData.Application.ActiveUIDocument.Document;
 
+                // Get coordinates of the document base point
+                var docBasePoint = BasePoint.GetProjectBasePoint(doc).SharedPosition;
+                var docBasePointX = docBasePoint.X;
+                var docBasePointY = docBasePoint.Y;
+                var docBasePointZ = docBasePoint.Z;
+
+                // Get the correct document title if the user is using a local copy of the central model
                 string docTitle;
 
                 if (!doc.IsWorkshared)
                 {
-                    docTitle = doc.Title;
+                    docTitle = doc.Title + ".rvt";
                 }
                 else
                 {
@@ -33,7 +40,7 @@ namespace RevitApp.Plugin.ClashManagement
 
                     if (separatorIndex != -1)
                     {
-                        docTitle = doc.Title.Substring(0, separatorIndex);
+                        docTitle = doc.Title.Substring(0, separatorIndex) + ".rvt";
                     }
                     else
                     {
@@ -125,7 +132,7 @@ namespace RevitApp.Plugin.ClashManagement
 
                     if (contentRows.Count == 0)
                     {
-                        TaskDialog.Show("Ошибка", $"В отчете \"{reportName}\" коллизий не обнаружено.");
+                        TaskDialog.Show("Ошибка", $"В отчете \"{reportName}\" коллизий не обнаружено. Данный отчет будет пропущен.");
                         continue;
                     }
 
@@ -137,7 +144,7 @@ namespace RevitApp.Plugin.ClashManagement
 
                         var clashPointCoordinates = contentColumns[pointIndex].InnerHtml;
 
-                        var clashPoint = GetClashPoint(clashPointCoordinates);
+                        var clashPoint = GetClashPoint(clashPointCoordinates, docBasePointX, docBasePointY, docBasePointZ);
 
                         var element1ContentColumns = contentColumns.Where(c => c.ClassName == "элемент1Содержимое").ToList();
 
@@ -151,7 +158,7 @@ namespace RevitApp.Plugin.ClashManagement
 
                         var modelName2 = element2ContentColumns[itemModelIndex].InnerHtml;
 
-                        if (modelName1.Contains(docTitle) && modelName2.Contains(docTitle))
+                        if (modelName1 == docTitle && modelName2 == docTitle)
                         {
                             var element1 = doc.GetElement(clashElementId1);
                             var element2 = doc.GetElement(clashElementId2);
@@ -171,13 +178,13 @@ namespace RevitApp.Plugin.ClashManagement
                             }
                         }
 
-                        else if (modelName1 != modelName2 && modelName1.Contains(docTitle))
+                        else if (modelName1 != modelName2 && modelName1 == docTitle)
                         {
                             Document linkDoc;
 
                             try
                             {
-                                linkDoc = rvtLinks.Select(l => l.GetLinkDocument()).FirstOrDefault(d => modelName2.Contains(d.Title));
+                                linkDoc = rvtLinks.Select(l => l.GetLinkDocument()).FirstOrDefault(ld => modelName2 == ld.Title + ".rvt");
                             }
                             catch (System.NullReferenceException)
                             {
@@ -202,13 +209,13 @@ namespace RevitApp.Plugin.ClashManagement
                             }
                         }
 
-                        else if (modelName1 != modelName2 && modelName2.Contains(docTitle))
+                        else if (modelName1 != modelName2 && modelName2 == docTitle)
                         {
                             Document linkDoc;
 
                             try
                             {
-                                linkDoc = rvtLinks.Select(l => l.GetLinkDocument()).FirstOrDefault(d => modelName1.Contains(d.Title));
+                                linkDoc = rvtLinks.Select(l => l.GetLinkDocument()).FirstOrDefault(ld => modelName1 == ld.Title + ".rvt");
                             }
                             catch (System.NullReferenceException)
                             {
@@ -235,7 +242,6 @@ namespace RevitApp.Plugin.ClashManagement
 
                         else
                         {
-                            TaskDialog.Show("Предупреждение", $"Выбран неверный отчет \"{reportName}\". По всем коллизиям обнаружено несоответствие наименований моделей наименованию текущего документа \"{docTitle}\" и связанных моделей. Данный отчет будет пропущен.");
                             continue;
                         }
                     }
@@ -270,11 +276,11 @@ namespace RevitApp.Plugin.ClashManagement
             }
         }
 
-        private XYZ GetClashPoint(string clashPointCoordinates)
+        private XYZ GetClashPoint(string clashPointCoordinates, double basePointX, double basePointY, double basePointZ)
         {
             var pointCoordinates = clashPointCoordinates.Split(',').SelectMany(x => x.Trim().Split(':')).Where((x, i) => i % 2 != 0).Select(x => UnitUtils.Convert(double.Parse(x.Replace('.', ',')), UnitTypeId.Meters, UnitTypeId.Feet)).ToArray();
 
-            var clashPoint = new XYZ(pointCoordinates[0], pointCoordinates[1], pointCoordinates[2]);
+            var clashPoint = new XYZ(pointCoordinates[0] - basePointX, pointCoordinates[1] - basePointY, pointCoordinates[2] - basePointZ);
 
             return clashPoint;
         }
