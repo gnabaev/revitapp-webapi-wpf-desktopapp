@@ -42,6 +42,9 @@ namespace RevitApp.Plugin.ClashManagement
                     return Result.Cancelled;
                 }
 
+                // Get the workset for clash indicators or create a new one
+                var clashWorkset = GetWorkset(doc, "#Clashes");
+
                 foreach (var fileName in fileNames)
                 {
                     //Get HTML document tree
@@ -142,7 +145,7 @@ namespace RevitApp.Plugin.ClashManagement
                                 {
                                     transaction.Start("Размещение индикатора коллизии");
 
-                                    var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol);
+                                    var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol, clashWorkset);
 
                                     FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
 
@@ -181,7 +184,7 @@ namespace RevitApp.Plugin.ClashManagement
                                 {
                                     transaction.Start("Размещение индикатора коллизии");
 
-                                    var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol);
+                                    var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol, clashWorkset);
 
                                     FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
 
@@ -220,7 +223,7 @@ namespace RevitApp.Plugin.ClashManagement
                                 {
                                     transaction.Start("Размещение индикатора коллизии");
 
-                                    var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol);
+                                    var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol, clashWorkset);
 
                                     FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
 
@@ -286,6 +289,36 @@ namespace RevitApp.Plugin.ClashManagement
             return docTitle;
         }
 
+        private Workset GetWorkset(Document doc, string worksetName)
+        {
+            Workset workset = null;
+
+            if (doc.IsWorkshared)
+            {
+                var worksets = new FilteredWorksetCollector(doc).ToWorksets();
+
+                var desiredWorkset = worksets.FirstOrDefault(x => x.Name == worksetName);
+
+                if (desiredWorkset != null)
+                {
+                    workset = desiredWorkset;
+                }
+                else
+                {
+                    using (Transaction transaction = new Transaction(doc))
+                    {
+                        transaction.Start("Создание рабочего набора");
+
+                        workset = Workset.Create(doc, worksetName);
+
+                        transaction.Commit();
+                    }
+                }
+            }
+
+            return workset;
+        }
+
         private IHtmlDocument GetHtmlDocument(string fileName)
         {
             string htmlFile = File.ReadAllText(fileName, Encoding.UTF8);
@@ -304,7 +337,7 @@ namespace RevitApp.Plugin.ClashManagement
             return clashPoint;
         }
 
-        private FamilyInstance PlaceClashIndicator(Document doc, XYZ point, FamilySymbol familySymbol)
+        private FamilyInstance PlaceClashIndicator(Document doc, XYZ point, FamilySymbol familySymbol, Workset workset)
         {
             if (!familySymbol.IsActive)
             {
@@ -313,6 +346,7 @@ namespace RevitApp.Plugin.ClashManagement
 
             var familyInstance = doc.Create.NewFamilyInstance(point, familySymbol, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
             familyInstance.Pinned = true;
+            familyInstance.get_Parameter(BuiltInParameter.ELEM_PARTITION_PARAM).Set(workset.Id.IntegerValue);
 
             return familyInstance;
         }
