@@ -28,26 +28,9 @@ namespace RevitApp.Plugin.ClashManagement
                 var docBasePointZ = docBasePoint.Z;
 
                 // Get the correct document title if the user is using a local copy of the central model
-                string docTitle;
+                var docTitle = GetDocumentTitle(doc);
 
-                if (!doc.IsWorkshared)
-                {
-                    docTitle = doc.Title + ".rvt";
-                }
-                else
-                {
-                    var separatorIndex = doc.Title.LastIndexOf('_');
-
-                    if (separatorIndex != -1)
-                    {
-                        docTitle = doc.Title.Substring(0, separatorIndex) + ".rvt";
-                    }
-                    else
-                    {
-                        return Result.Cancelled;
-                    }
-                }
-
+                // Get a clash indicator family symbol
                 var indicatorSymbol = new FilteredElementCollector(doc)
                     .OfClass(typeof(FamilySymbol))
                     .Cast<FamilySymbol>()
@@ -256,7 +239,29 @@ namespace RevitApp.Plugin.ClashManagement
             return Result.Succeeded;
         }
 
-        public string[] GetFileNamesFromDialog(string title, string filter, bool multiselect)
+
+        private string GetDocumentTitle(Document doc)
+        {
+            string docTitle = doc.Title;
+
+            if (!doc.IsWorkshared)
+            {
+                docTitle += ".rvt";
+            }
+            else
+            {
+                var separatorIndex = docTitle.LastIndexOf('_');
+
+                if (separatorIndex != -1)
+                {
+                    docTitle = docTitle.Substring(0, separatorIndex) + ".rvt";
+                }
+            }
+
+            return docTitle;
+        }
+
+        private string[] GetFileNamesFromDialog(string title, string filter, bool multiselect)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
 
