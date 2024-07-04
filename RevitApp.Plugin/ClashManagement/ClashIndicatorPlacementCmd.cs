@@ -158,7 +158,7 @@ namespace RevitApp.Plugin.ClashManagement
                             }
                             else
                             {
-                                errors.Add($"Один или оба элемента не существуют: {reportName}, {clashName}, {clashElementId1}, {modelName1}, {clashElementId2}, {modelName2}");
+                                errors.Add($"{reportName} | {clashName} : Один или оба элемента не существуют в моделях");
                                 continue;
                             }
                         }
@@ -173,9 +173,7 @@ namespace RevitApp.Plugin.ClashManagement
                                 return Result.Cancelled;
                             }
 
-                            Document linkDoc;
-
-                            linkDoc = rvtLinks.Select(l => l.GetLinkDocument()).FirstOrDefault(ld => modelName2 == ld.Title + ".rvt");
+                            var linkDoc = rvtLinks.Select(l => l.GetLinkDocument()).Where(ld => ld != null).FirstOrDefault(ld => modelName2 == ld.Title + ".rvt");
 
                             if (linkDoc != null)
                             {
@@ -197,13 +195,13 @@ namespace RevitApp.Plugin.ClashManagement
                                 }
                                 else
                                 {
-                                    errors.Add($"Один или оба элемента не существуют: {reportName}, {clashName}, {clashElementId1}, {modelName1}, {clashElementId2}, {modelName2}");
+                                    errors.Add($"{reportName} | {clashName} : Один или оба элемента не существуют в моделях");
                                     continue;
                                 }
                             }
                             else
                             {
-                                errors.Add($"В текущем документе отсутствует RVT-связь {modelName2}: {reportName}, {clashName}, {clashElementId1}, {modelName1}, {clashElementId2}, {modelName2}");
+                                errors.Add($"{reportName} | {clashName} : В текущем документе {docTitle} отсутствует RVT-связь {modelName2}");
                                 continue;
                             }
                         }
@@ -218,9 +216,7 @@ namespace RevitApp.Plugin.ClashManagement
                                 return Result.Cancelled;
                             }
 
-                            Document linkDoc;
-
-                            linkDoc = rvtLinks.Select(l => l.GetLinkDocument()).FirstOrDefault(ld => modelName1 == ld.Title + ".rvt");
+                            var linkDoc = rvtLinks.Select(l => l.GetLinkDocument()).Where(ld => ld != null).FirstOrDefault(ld => modelName1 == ld.Title + ".rvt");
 
                             if (linkDoc != null)
                             {
@@ -242,20 +238,20 @@ namespace RevitApp.Plugin.ClashManagement
                                 }
                                 else
                                 {
-                                    errors.Add($"Один или оба элемента не существуют: {reportName}, {clashName}, {clashElementId1}, {modelName1}, {clashElementId2}, {modelName2}");
+                                    errors.Add($"{reportName} | {clashName} : Один или оба элемента не существуют в моделях");
                                     continue;
                                 }
                             }
                             else
                             {
-                                errors.Add($"В текущем документе отсутствует RVT-связь {modelName1}: {reportName}, {clashName}, {clashElementId1}, {modelName1}, {clashElementId2}, {modelName2}");
+                                errors.Add($"{reportName} | {clashName} : В текущем документе {docTitle} отсутствует RVT-связь {modelName1}");
                                 continue;
                             }
                         }
 
                         else
                         {
-                            errors.Add($"Наименования моделей {modelName1} и {modelName2} в отчете {reportName} не соответствуют наименованию текущего документа {docTitle} и наименованиям RVT-связей: {reportName}, {clashName}, {clashElementId1}, {modelName1}, {clashElementId2}, {modelName2}");
+                            errors.Add($"{reportName} | {clashName} : Наименования {modelName1} и {modelName2} не соответствуют текущему документу {docTitle}");
                             continue;
                         }
                     }
@@ -306,7 +302,6 @@ namespace RevitApp.Plugin.ClashManagement
                 return new string[0];
             }
         }
-
         private string GetDocumentTitle(Document doc)
         {
             string docTitle = doc.Title;
