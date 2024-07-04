@@ -42,20 +42,10 @@ namespace RevitApp.Plugin.ClashManagement
                     return Result.Cancelled;
                 }
 
-                var rvtLinks = new FilteredElementCollector(doc).OfClass(typeof(RevitLinkInstance)).Cast<RevitLinkInstance>().ToList();
-
-                if (rvtLinks.Count == 0)
-                {
-                    TaskDialog.Show("Ошибка", $"В документе \"{docTitle}\" отсутствуют RVT-связи. Загрузите минимум одну RVT-связь для размещения индикаторов коллизий.");
-                    return Result.Cancelled;
-                }
-
                 foreach (var fileName in fileNames)
                 {
-                    var htmlFile = File.ReadAllText(fileName, Encoding.UTF8);
-
                     //Get HTML document tree
-                    IHtmlDocument htmlDoc = new HtmlParser().ParseDocument(htmlFile);
+                    var htmlDoc = GetHtmlDocument(fileName);
 
                     var reportName = htmlDoc.QuerySelector(".testName").InnerHtml;
 
@@ -115,7 +105,7 @@ namespace RevitApp.Plugin.ClashManagement
 
                     if (contentRows.Count == 0)
                     {
-                        TaskDialog.Show("Ошибка", $"В отчете \"{reportName}\" коллизий не обнаружено. Данный отчет будет пропущен.");
+                        TaskDialog.Show("Предупреждение", $"В отчете \"{reportName}\" коллизий не обнаружено. Данный отчет будет пропущен.");
                         continue;
                     }
 
@@ -163,6 +153,14 @@ namespace RevitApp.Plugin.ClashManagement
 
                         else if (modelName1 != modelName2 && modelName1 == docTitle)
                         {
+                            var rvtLinks = new FilteredElementCollector(doc).OfClass(typeof(RevitLinkInstance)).Cast<RevitLinkInstance>().ToList();
+
+                            if (rvtLinks.Count == 0)
+                            {
+                                TaskDialog.Show("Ошибка", $"В документе \"{docTitle}\" отсутствуют RVT-связи. Загрузите минимум одну RVT-связь для размещения индикаторов коллизий.");
+                                return Result.Cancelled;
+                            }
+
                             Document linkDoc;
 
                             try
@@ -194,6 +192,14 @@ namespace RevitApp.Plugin.ClashManagement
 
                         else if (modelName1 != modelName2 && modelName2 == docTitle)
                         {
+                            var rvtLinks = new FilteredElementCollector(doc).OfClass(typeof(RevitLinkInstance)).Cast<RevitLinkInstance>().ToList();
+
+                            if (rvtLinks.Count == 0)
+                            {
+                                TaskDialog.Show("Ошибка", $"В документе \"{docTitle}\" отсутствуют RVT-связи. Загрузите минимум одну RVT-связь для размещения индикаторов коллизий.");
+                                return Result.Cancelled;
+                            }
+
                             Document linkDoc;
 
                             try
@@ -239,6 +245,25 @@ namespace RevitApp.Plugin.ClashManagement
             return Result.Succeeded;
         }
 
+        private string[] GetFileNamesFromDialog(string title, string filter, bool multiselect)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+
+            openFileDialog.Title = title;
+            openFileDialog.Filter = filter;
+            openFileDialog.Multiselect = multiselect;
+
+            bool? result = openFileDialog.ShowDialog();
+
+            if (result == true)
+            {
+                return openFileDialog.FileNames;
+            }
+            else
+            {
+                return new string[0];
+            }
+        }
 
         private string GetDocumentTitle(Document doc)
         {
@@ -261,24 +286,13 @@ namespace RevitApp.Plugin.ClashManagement
             return docTitle;
         }
 
-        private string[] GetFileNamesFromDialog(string title, string filter, bool multiselect)
+        private IHtmlDocument GetHtmlDocument(string fileName)
         {
-            OpenFileDialog openFileDialog = new OpenFileDialog();
+            string htmlFile = File.ReadAllText(fileName, Encoding.UTF8);
 
-            openFileDialog.Title = title;
-            openFileDialog.Filter = filter;
-            openFileDialog.Multiselect = multiselect;
+            IHtmlDocument htmlDoc = new HtmlParser().ParseDocument(htmlFile);
 
-            bool? result = openFileDialog.ShowDialog();
-
-            if (result == true)
-            {
-                return openFileDialog.FileNames;
-            }
-            else
-            {
-                return new string[0];
-            }
+            return htmlDoc;
         }
 
         private XYZ GetClashPoint(string clashPointCoordinates, double basePointX, double basePointY, double basePointZ)
