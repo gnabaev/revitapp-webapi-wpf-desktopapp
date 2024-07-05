@@ -147,7 +147,7 @@ namespace RevitApp.Plugin.ClashManagement
                             {
                                 using (Transaction transaction = new Transaction(doc))
                                 {
-                                    transaction.Start("Размещение индикатора коллизии");
+                                    transaction.Start("Разместить индикатор коллизии");
 
                                     var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol, clashWorkset);
 
@@ -184,7 +184,7 @@ namespace RevitApp.Plugin.ClashManagement
                                 {
                                     using (Transaction transaction = new Transaction(doc))
                                     {
-                                        transaction.Start("Размещение индикатора коллизии");
+                                        transaction.Start("Разместить индикатор коллизии");
 
                                         var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol, clashWorkset);
 
@@ -201,7 +201,7 @@ namespace RevitApp.Plugin.ClashManagement
                             }
                             else
                             {
-                                errors.Add($"{reportName} | {clashName} : В текущем документе {docTitle} отсутствует RVT-связь {modelName2}");
+                                errors.Add($"{reportName} | {clashName} : В текущем документе {docTitle} отсутствует или выгружена RVT-связь {modelName2}");
                                 continue;
                             }
                         }
@@ -227,7 +227,7 @@ namespace RevitApp.Plugin.ClashManagement
                                 {
                                     using (Transaction transaction = new Transaction(doc))
                                     {
-                                        transaction.Start("Размещение индикатора коллизии");
+                                        transaction.Start("Разместить индикатор коллизии");
 
                                         var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol, clashWorkset);
 
@@ -244,7 +244,7 @@ namespace RevitApp.Plugin.ClashManagement
                             }
                             else
                             {
-                                errors.Add($"{reportName} | {clashName} : В текущем документе {docTitle} отсутствует RVT-связь {modelName1}");
+                                errors.Add($"{reportName} | {clashName} : В текущем документе {docTitle} отсутствует или выгружена RVT-связь {modelName1}");
                                 continue;
                             }
                         }
@@ -341,7 +341,7 @@ namespace RevitApp.Plugin.ClashManagement
                 {
                     using (Transaction transaction = new Transaction(doc))
                     {
-                        transaction.Start("Создание рабочего набора");
+                        transaction.Start("Создать рабочий набор");
 
                         workset = Workset.Create(doc, worksetName);
 
