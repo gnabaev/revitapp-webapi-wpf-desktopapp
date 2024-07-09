@@ -23,11 +23,27 @@ namespace RevitApp.Plugin.ClashManagement
             {
                 Document doc = commandData.Application.ActiveUIDocument.Document;
 
+                //var docBasePoint = BasePoint.GetProjectBasePoint(doc).SharedPosition;
+                //var docBasePointX = docBasePoint.X;
+                //var docBasePointY = docBasePoint.Y;
+                //var docBasePointZ = docBasePoint.Z;
+
+                //var projectBasePoint = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_ProjectBasePoint).ToElements().FirstOrDefault();
+
+                //var projectBasePointX = projectBasePoint.get_Parameter(BuiltInParameter.BASEPOINT_EASTWEST_PARAM).AsDouble();
+                //var projectBasePointY = projectBasePoint.get_Parameter(BuiltInParameter.BASEPOINT_NORTHSOUTH_PARAM).AsDouble();
+                //var projectBasePointZ = projectBasePoint.get_Parameter(BuiltInParameter.BASEPOINT_ELEVATION_PARAM).AsDouble();
+                //var projectBasePointAngle = projectBasePoint.get_Parameter(BuiltInParameter.BASEPOINT_ANGLETON_PARAM).AsDouble();
+
                 // Get coordinates of the document base point
-                var docBasePoint = BasePoint.GetProjectBasePoint(doc).SharedPosition;
-                var docBasePointX = docBasePoint.X;
-                var docBasePointY = docBasePoint.Y;
-                var docBasePointZ = docBasePoint.Z;
+                var origin = new XYZ(0, 0, 0);
+                var projectLocation = doc.ActiveProjectLocation;
+                var projectPosition = projectLocation.GetProjectPosition(origin);
+
+                var projectPositionX = projectPosition.EastWest;
+                var projectPositionY = projectPosition.NorthSouth;
+                var projectPositionZ = projectPosition.Elevation;
+                var projectPositionAngle = projectPosition.Angle;
 
                 // Get the correct document title if the user is using a local copy of the central model
                 var docTitle = GetDocumentTitle(doc);
@@ -124,7 +140,7 @@ namespace RevitApp.Plugin.ClashManagement
 
                         var clashPointCoordinates = contentColumns[pointIndex].InnerHtml;
 
-                        var clashPoint = GetClashPoint(clashPointCoordinates, docBasePointX, docBasePointY, docBasePointZ);
+                        var clashPoint = GetClashPoint(clashPointCoordinates, projectPositionX, projectPositionY, projectPositionZ, projectPositionAngle);
 
                         var element1ContentColumns = contentColumns.Where(c => c.ClassName == "элемент1Содержимое").ToList();
 
@@ -362,13 +378,19 @@ namespace RevitApp.Plugin.ClashManagement
             return htmlDoc;
         }
 
-        private XYZ GetClashPoint(string clashPointCoordinates, double basePointX, double basePointY, double basePointZ)
+        private XYZ GetClashPoint(string clashPointCoordinates, double projectPositionX, double projectPositionY, double projectPositionZ, double projectPositionAngle)
         {
             var pointCoordinates = clashPointCoordinates.Split(',').SelectMany(x => x.Trim().Split(':')).Where((x, i) => i % 2 != 0).Select(x => UnitUtils.Convert(double.Parse(x.Replace('.', ',')), UnitTypeId.Meters, UnitTypeId.Feet)).ToArray();
 
-            var clashPoint = new XYZ(pointCoordinates[0] - basePointX, pointCoordinates[1] - basePointY, pointCoordinates[2] - basePointZ);
+            var reportClashPoint = new XYZ(pointCoordinates[0], pointCoordinates[1], pointCoordinates[2]);
 
-            return clashPoint;
+            var rotation = Transform.CreateRotationAtPoint(XYZ.BasisZ, projectPositionAngle * (-1), new XYZ(projectPositionX, projectPositionY, projectPositionZ));
+
+            var rotatedClashPoint = rotation.OfPoint(reportClashPoint);
+
+            var movedClashPoint = new XYZ(rotatedClashPoint.X - projectPositionX, rotatedClashPoint.Y - projectPositionY, rotatedClashPoint.Z - projectPositionZ);
+
+            return movedClashPoint;
         }
 
         private FamilyInstance PlaceClashIndicator(Document doc, XYZ point, FamilySymbol familySymbol, Workset workset)
