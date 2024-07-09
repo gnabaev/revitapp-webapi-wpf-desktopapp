@@ -36,9 +36,7 @@ namespace RevitApp.Plugin.ClashManagement
                 //var projectBasePointAngle = projectBasePoint.get_Parameter(BuiltInParameter.BASEPOINT_ANGLETON_PARAM).AsDouble();
 
                 // Get coordinates of the document base point
-                var origin = new XYZ(0, 0, 0);
-                var projectLocation = doc.ActiveProjectLocation;
-                var projectPosition = projectLocation.GetProjectPosition(origin);
+                var projectPosition = GetDocumentBasePoint(doc);
 
                 var projectPositionX = projectPosition.EastWest;
                 var projectPositionY = projectPosition.NorthSouth;
@@ -48,7 +46,7 @@ namespace RevitApp.Plugin.ClashManagement
                 // Get the correct document title if the user is using a local copy of the central model
                 var docTitle = GetDocumentTitle(doc);
 
-                // Get a clash indicator family symbol
+                // Get the clash indicator family symbol
                 var indicatorSymbol = new FilteredElementCollector(doc)
                     .OfClass(typeof(FamilySymbol))
                     .Cast<FamilySymbol>()
@@ -56,7 +54,7 @@ namespace RevitApp.Plugin.ClashManagement
 
                 if (indicatorSymbol == null)
                 {
-                    TaskDialog.Show("Ошибка", $"В документе \"{docTitle}\" отсутствует семейство \"Индикатор коллизии\". Загрузите семейство и повторите попытку.");
+                    TaskDialog.Show("Ошибка", $"В документе {docTitle} отсутствует семейство \"Индикатор коллизии\". Загрузите семейство и повторите попытку.");
                     return Result.Cancelled;
                 }
 
@@ -86,6 +84,7 @@ namespace RevitApp.Plugin.ClashManagement
 
                     var headerColumns = headerRow.Children;
 
+                    // Get all general headers of the main table
                     var generalHeaderColumns = headerColumns.Where(c => c.ClassName == "generalHeader").ToList();
 
                     int clashIndex = -1;
@@ -105,6 +104,19 @@ namespace RevitApp.Plugin.ClashManagement
                         }
                     }
 
+                    if (clashIndex == -1)
+                    {
+                        TaskDialog.Show("Ошибка", $"В главной таблице отчета {reportName} отсутствует столбец Наименование конфликта.");
+                        return Result.Cancelled;
+                    }
+
+                    if (pointIndex == -1)
+                    {
+                        TaskDialog.Show("Ошибка", $"В главной таблице отчета {reportName} отсутствует столбец Точка конфликта.");
+                        return Result.Cancelled;
+                    }
+
+                    // Get headers of the first element of the main table
                     var itemHeaderColumns = headerColumns.Where(c => c.ClassName == "item1Header").ToList();
 
                     int itemIdIndex = -1;
@@ -122,6 +134,18 @@ namespace RevitApp.Plugin.ClashManagement
                         {
                             itemModelIndex = i;
                         }
+                    }
+
+                    if (itemIdIndex == -1)
+                    {
+                        TaskDialog.Show("Ошибка", $"В главной таблице отчета {reportName} отсутствует столбец Id.");
+                        return Result.Cancelled;
+                    }
+
+                    if (itemIdIndex == -1)
+                    {
+                        TaskDialog.Show("Ошибка", $"В главной таблице отчета {reportName} отсутствует столбец Файл источника.");
+                        return Result.Cancelled;
                     }
 
                     var contentRows = mainTableRows.Where(i => i.ClassName == "contentRow").ToList();
@@ -285,9 +309,11 @@ namespace RevitApp.Plugin.ClashManagement
                                 errorLog.WriteLine(error);
                             }
                         }
+
+                        TaskDialog.Show("Уведомление", $"Анализ отчета {reportName} завершен. Часть индикаторов не размещена. Результаты анализа залогированы в файл {errorLogName} на рабочем столе.");
                     }
 
-                    TaskDialog.Show("Уведомление", $"Анализ отчета {reportName} и размещение индикаторов завершено. Результаты анализа залогированы в файл {errorLogName} на вашем рабочем столе.");
+                    TaskDialog.Show("Уведомление", $"Анализ отчета {reportName} завершен. Все индикаторы размещены.");
                 }
             }
 
@@ -318,6 +344,17 @@ namespace RevitApp.Plugin.ClashManagement
                 return new string[0];
             }
         }
+        private ProjectPosition GetDocumentBasePoint(Document doc)
+        {
+            var origin = new XYZ(0, 0, 0);
+
+            var projectLocation = doc.ActiveProjectLocation;
+
+            var projectPosition = projectLocation.GetProjectPosition(origin);
+
+            return projectPosition;
+        }
+
         private string GetDocumentTitle(Document doc)
         {
             string docTitle = doc.Title;
