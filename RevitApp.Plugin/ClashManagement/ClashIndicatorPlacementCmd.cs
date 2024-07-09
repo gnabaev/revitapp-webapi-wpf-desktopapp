@@ -156,125 +156,42 @@ namespace RevitApp.Plugin.ClashManagement
                         continue;
                     }
 
-                    foreach (var contentRow in contentRows)
+                    using (Transaction transaction = new Transaction(doc))
                     {
-                        var contentColumns = contentRow.Children;
+                        transaction.Start("Разместить индикаторы коллизий");
 
-                        var clashName = contentColumns[clashIndex].InnerHtml;
-
-                        var clashPointCoordinates = contentColumns[pointIndex].InnerHtml;
-
-                        var clashPoint = GetClashPoint(clashPointCoordinates, projectPositionX, projectPositionY, projectPositionZ, projectPositionAngle);
-
-                        var element1ContentColumns = contentColumns.Where(c => c.ClassName == "элемент1Содержимое").ToList();
-
-                        var clashElementId1 = new ElementId(int.Parse(element1ContentColumns[itemIdIndex].InnerHtml));
-
-                        var modelName1 = element1ContentColumns[itemModelIndex].InnerHtml;
-
-                        var element2ContentColumns = contentColumns.Where(c => c.ClassName == "элемент2Содержимое").ToList();
-
-                        var clashElementId2 = new ElementId(int.Parse(element2ContentColumns[itemIdIndex].InnerHtml));
-
-                        var modelName2 = element2ContentColumns[itemModelIndex].InnerHtml;
-
-                        if (modelName1 == docTitle && modelName2 == docTitle)
+                        foreach (var contentRow in contentRows)
                         {
-                            var element1 = doc.GetElement(clashElementId1);
-                            var element2 = doc.GetElement(clashElementId2);
+                            var contentColumns = contentRow.Children;
 
-                            if (element1 != null && element2 != null)
-                            {
-                                using (Transaction transaction = new Transaction(doc))
-                                {
-                                    transaction.Start("Разместить индикатор коллизии");
+                            var clashName = contentColumns[clashIndex].InnerHtml;
 
-                                    var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol, clashWorkset);
+                            var clashPointCoordinates = contentColumns[pointIndex].InnerHtml;
 
-                                    FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
+                            var clashPoint = GetClashPoint(clashPointCoordinates, projectPositionX, projectPositionY, projectPositionZ, projectPositionAngle);
 
-                                    transaction.Commit();
-                                }
-                            }
-                            else
-                            {
-                                errors.Add($"{reportName} | {clashName} : Один или оба элемента не существуют в моделях");
-                                continue;
-                            }
-                        }
+                            var element1ContentColumns = contentColumns.Where(c => c.ClassName == "элемент1Содержимое").ToList();
 
-                        else if (modelName1 != modelName2 && modelName1 == docTitle)
-                        {
-                            var rvtLinks = new FilteredElementCollector(doc).OfClass(typeof(RevitLinkInstance)).Cast<RevitLinkInstance>().ToList();
+                            var clashElementId1 = new ElementId(int.Parse(element1ContentColumns[itemIdIndex].InnerHtml));
 
-                            if (rvtLinks.Count == 0)
-                            {
-                                TaskDialog.Show("Ошибка", $"В текущем документе {docTitle} отсутствуют RVT-связи. Загрузите минимум одну RVT-связь для размещения индикаторов коллизий.");
-                                return Result.Cancelled;
-                            }
+                            var modelName1 = element1ContentColumns[itemModelIndex].InnerHtml;
 
-                            var linkDoc = rvtLinks.Select(l => l.GetLinkDocument()).Where(ld => ld != null).FirstOrDefault(ld => modelName2 == ld.Title + ".rvt");
+                            var element2ContentColumns = contentColumns.Where(c => c.ClassName == "элемент2Содержимое").ToList();
 
-                            if (linkDoc != null)
+                            var clashElementId2 = new ElementId(int.Parse(element2ContentColumns[itemIdIndex].InnerHtml));
+
+                            var modelName2 = element2ContentColumns[itemModelIndex].InnerHtml;
+
+                            if (modelName1 == docTitle && modelName2 == docTitle)
                             {
                                 var element1 = doc.GetElement(clashElementId1);
-                                var element2 = linkDoc.GetElement(clashElementId2);
-
-                                if (element1 != null && element2 != null)
-                                {
-                                    using (Transaction transaction = new Transaction(doc))
-                                    {
-                                        transaction.Start("Разместить индикатор коллизии");
-
-                                        var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol, clashWorkset);
-
-                                        FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
-
-                                        transaction.Commit();
-                                    }
-                                }
-                                else
-                                {
-                                    errors.Add($"{reportName} | {clashName} : Один или оба элемента не существуют в моделях");
-                                    continue;
-                                }
-                            }
-                            else
-                            {
-                                errors.Add($"{reportName} | {clashName} : В текущем документе {docTitle} отсутствует или выгружена RVT-связь {modelName2}");
-                                continue;
-                            }
-                        }
-
-                        else if (modelName1 != modelName2 && modelName2 == docTitle)
-                        {
-                            var rvtLinks = new FilteredElementCollector(doc).OfClass(typeof(RevitLinkInstance)).Cast<RevitLinkInstance>().ToList();
-
-                            if (rvtLinks.Count == 0)
-                            {
-                                TaskDialog.Show("Ошибка", $"В текущем документе {docTitle} отсутствуют RVT-связи. Загрузите минимум одну RVT-связь для размещения индикаторов коллизий.");
-                                return Result.Cancelled;
-                            }
-
-                            var linkDoc = rvtLinks.Select(l => l.GetLinkDocument()).Where(ld => ld != null).FirstOrDefault(ld => modelName1 == ld.Title + ".rvt");
-
-                            if (linkDoc != null)
-                            {
-                                var element1 = linkDoc.GetElement(clashElementId1);
                                 var element2 = doc.GetElement(clashElementId2);
 
                                 if (element1 != null && element2 != null)
                                 {
-                                    using (Transaction transaction = new Transaction(doc))
-                                    {
-                                        transaction.Start("Разместить индикатор коллизии");
+                                    var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol, clashWorkset);
 
-                                        var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol, clashWorkset);
-
-                                        FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
-
-                                        transaction.Commit();
-                                    }
+                                    FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
                                 }
                                 else
                                 {
@@ -282,18 +199,87 @@ namespace RevitApp.Plugin.ClashManagement
                                     continue;
                                 }
                             }
+
+                            else if (modelName1 != modelName2 && modelName1 == docTitle)
+                            {
+                                var rvtLinks = new FilteredElementCollector(doc).OfClass(typeof(RevitLinkInstance)).Cast<RevitLinkInstance>().ToList();
+
+                                if (rvtLinks.Count == 0)
+                                {
+                                    TaskDialog.Show("Ошибка", $"В текущем документе {docTitle} отсутствуют RVT-связи. Загрузите минимум одну RVT-связь для размещения индикаторов коллизий.");
+                                    return Result.Cancelled;
+                                }
+
+                                var linkDoc = rvtLinks.Select(l => l.GetLinkDocument()).Where(ld => ld != null).FirstOrDefault(ld => modelName2 == ld.Title + ".rvt");
+
+                                if (linkDoc != null)
+                                {
+                                    var element1 = doc.GetElement(clashElementId1);
+                                    var element2 = linkDoc.GetElement(clashElementId2);
+
+                                    if (element1 != null && element2 != null)
+                                    {
+                                        var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol, clashWorkset);
+
+                                        FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
+                                    }
+                                    else
+                                    {
+                                        errors.Add($"{reportName} | {clashName} : Один или оба элемента не существуют в моделях");
+                                        continue;
+                                    }
+                                }
+                                else
+                                {
+                                    errors.Add($"{reportName} | {clashName} : В текущем документе {docTitle} отсутствует или выгружена RVT-связь {modelName2}");
+                                    continue;
+                                }
+                            }
+
+                            else if (modelName1 != modelName2 && modelName2 == docTitle)
+                            {
+                                var rvtLinks = new FilteredElementCollector(doc).OfClass(typeof(RevitLinkInstance)).Cast<RevitLinkInstance>().ToList();
+
+                                if (rvtLinks.Count == 0)
+                                {
+                                    TaskDialog.Show("Ошибка", $"В текущем документе {docTitle} отсутствуют RVT-связи. Загрузите минимум одну RVT-связь для размещения индикаторов коллизий.");
+                                    return Result.Cancelled;
+                                }
+
+                                var linkDoc = rvtLinks.Select(l => l.GetLinkDocument()).Where(ld => ld != null).FirstOrDefault(ld => modelName1 == ld.Title + ".rvt");
+
+                                if (linkDoc != null)
+                                {
+                                    var element1 = linkDoc.GetElement(clashElementId1);
+                                    var element2 = doc.GetElement(clashElementId2);
+
+                                    if (element1 != null && element2 != null)
+                                    {
+                                        var indicatorInstance = PlaceClashIndicator(doc, clashPoint, indicatorSymbol, clashWorkset);
+
+                                        FillClashIndicatorInfo(indicatorInstance, reportName, clashName, clashElementId1, modelName1, clashElementId2, modelName2);
+                                    }
+                                    else
+                                    {
+                                        errors.Add($"{reportName} | {clashName} : Один или оба элемента не существуют в моделях");
+                                        continue;
+                                    }
+                                }
+                                else
+                                {
+                                    errors.Add($"{reportName} | {clashName} : В текущем документе {docTitle} отсутствует или выгружена RVT-связь {modelName1}");
+                                    continue;
+                                }
+                            }
+
                             else
                             {
-                                errors.Add($"{reportName} | {clashName} : В текущем документе {docTitle} отсутствует или выгружена RVT-связь {modelName1}");
+                                errors.Add($"{reportName} | {clashName} : Наименования {modelName1} и {modelName2} не соответствуют текущему документу {docTitle}");
                                 continue;
                             }
                         }
 
-                        else
-                        {
-                            errors.Add($"{reportName} | {clashName} : Наименования {modelName1} и {modelName2} не соответствуют текущему документу {docTitle}");
-                            continue;
-                        }
+                        transaction.Commit();
                     }
 
                     var errorLogPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
@@ -310,10 +296,12 @@ namespace RevitApp.Plugin.ClashManagement
                             }
                         }
 
-                        TaskDialog.Show("Уведомление", $"Анализ отчета {reportName} завершен. Часть индикаторов не размещена. Результаты анализа залогированы в файл {errorLogName} на рабочем столе.");
+                        TaskDialog.Show("Уведомление", $"Анализ отчета {reportName} завершен. Размещено {contentRows.Count - errors.Count} из {contentRows.Count} индикаторов. Результаты анализа залогированы в файл {errorLogName} на рабочем столе.");
                     }
-
-                    TaskDialog.Show("Уведомление", $"Анализ отчета {reportName} завершен. Все индикаторы размещены.");
+                    else
+                    {
+                        TaskDialog.Show("Уведомление", $"Анализ отчета {reportName} завершен. Размещено {contentRows.Count - errors.Count} из {contentRows.Count} индикаторов.");
+                    }
                 }
             }
 
