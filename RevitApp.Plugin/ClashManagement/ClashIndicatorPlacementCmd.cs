@@ -23,18 +23,6 @@ namespace RevitApp.Plugin.ClashManagement
             {
                 Document doc = commandData.Application.ActiveUIDocument.Document;
 
-                //var docBasePoint = BasePoint.GetProjectBasePoint(doc).SharedPosition;
-                //var docBasePointX = docBasePoint.X;
-                //var docBasePointY = docBasePoint.Y;
-                //var docBasePointZ = docBasePoint.Z;
-
-                //var projectBasePoint = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_ProjectBasePoint).ToElements().FirstOrDefault();
-
-                //var projectBasePointX = projectBasePoint.get_Parameter(BuiltInParameter.BASEPOINT_EASTWEST_PARAM).AsDouble();
-                //var projectBasePointY = projectBasePoint.get_Parameter(BuiltInParameter.BASEPOINT_NORTHSOUTH_PARAM).AsDouble();
-                //var projectBasePointZ = projectBasePoint.get_Parameter(BuiltInParameter.BASEPOINT_ELEVATION_PARAM).AsDouble();
-                //var projectBasePointAngle = projectBasePoint.get_Parameter(BuiltInParameter.BASEPOINT_ANGLETON_PARAM).AsDouble();
-
                 // Get coordinates of the document base point
                 var projectPosition = GetDocumentBasePoint(doc);
 
@@ -142,7 +130,7 @@ namespace RevitApp.Plugin.ClashManagement
                         return Result.Cancelled;
                     }
 
-                    if (itemIdIndex == -1)
+                    if (itemModelIndex == -1)
                     {
                         TaskDialog.Show("Ошибка", $"В главной таблице отчета {reportName} отсутствует столбец Файл источника.");
                         return Result.Cancelled;
@@ -156,19 +144,45 @@ namespace RevitApp.Plugin.ClashManagement
                         continue;
                     }
 
+                    var existIndicatorsByReport = new FilteredElementCollector(doc)
+                        .OfClass(typeof(FamilyInstance))
+                        .Cast<FamilyInstance>()
+                        .Where(i => i.Symbol.FamilyName == "Индикатор коллизии")
+                        .Where(i => i.LookupParameter("V Наименование отчета").AsString() == reportName)
+                        .ToList();
+
                     using (Transaction transaction = new Transaction(doc))
                     {
                         transaction.Start("Разместить индикаторы коллизий");
 
-                        foreach (var contentRow in contentRows)
+                        for (int i = 0; i < contentRows.Count; i++)
                         {
-                            var contentColumns = contentRow.Children;
+                            var contentColumns = contentRows[i].Children;
 
                             var clashName = contentColumns[clashIndex].InnerHtml;
 
                             var clashPointCoordinates = contentColumns[pointIndex].InnerHtml;
 
                             var clashPoint = GetClashPoint(clashPointCoordinates, projectPositionX, projectPositionY, projectPositionZ, projectPositionAngle);
+
+                            bool isDubplicate = false;
+
+                            for (int j = 0; j < existIndicatorsByReport.Count; j++)
+                            {
+                                var existClashPoint = (existIndicatorsByReport[j].Location as LocationPoint).Point;
+
+                                if (clashPoint.X == existClashPoint.X && clashPoint.Y == existClashPoint.Y && clashPoint.Z == existClashPoint.Z)
+                                {
+                                    isDubplicate = true;
+                                    errors.Add($"{reportName} | {clashName} : Индикатор коллизии уже размещен в текущем документе");
+                                    break;
+                                }
+                            }
+
+                            if (isDubplicate) 
+                            { 
+                                continue; 
+                            }
 
                             var element1ContentColumns = contentColumns.Where(c => c.ClassName == "элемент1Содержимое").ToList();
 
